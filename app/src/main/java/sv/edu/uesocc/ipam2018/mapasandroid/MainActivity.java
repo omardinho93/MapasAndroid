@@ -15,6 +15,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.AdapterView;
 import android.widget.Spinner;
@@ -31,7 +32,12 @@ import com.google.android.gms.maps.model.Circle;
 import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.prefs.Preferences;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback {
@@ -43,6 +49,20 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private Button btnMostrar;
     private CircleOptions circleOptions;
     private Circle circulo;
+
+    private int r=0, g=0, b=0;
+
+    private TextView txtlat;
+    private TextView txtlon;
+
+    private int colorCirculo;
+    private int radioCirculo;
+
+    String cadenaLista;
+
+    List <LatLng> centros = new ArrayList<>();
+
+    Gson gson = new Gson();
 
     private int mMapTypes[] = {
             GoogleMap.MAP_TYPE_NORMAL,
@@ -84,7 +104,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         btnIr.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                irUES();
+               // irUES();
+                mover();
             }
         });
 
@@ -121,13 +142,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         Mapa.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
             public void onMapLongClick(LatLng point) {
 
-                Toast.makeText(MainActivity.this, "Punto del Clic: " + point, Toast.LENGTH_LONG).show();
-                circleOptions = new CircleOptions()
-                        .center(point)
-                        .fillColor(Color.argb(32, 33, 150, 243))
-                        .radius(500)
-                        .strokeWidth(4);
-                circulo = Mapa.addCircle(circleOptions);
+               dibujarCirculo(point, colorCirculo, radioCirculo);
 
             }
         });
@@ -186,15 +201,22 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     //Método para cargar las preferencias
     private void asignarPreferences() {
-        SharedPreferences pref =
-                PreferenceManager.getDefaultSharedPreferences(
-                        this);
-
+        recuperarCirculos();
+        SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(this);
         Mapa.setMapType(mMapTypes[Integer.parseInt(pref.getString("tipoMapa", ""))]);
         Mapa.getUiSettings().setZoomControlsEnabled(pref.getBoolean("Zoomcontroll", false));
         Mapa.getUiSettings().setRotateGesturesEnabled(pref.getBoolean("Rotategesture", false));
         Mapa.getUiSettings().setScrollGesturesEnabled(pref.getBoolean("Scrollgesture", false));
         Mapa.getUiSettings().setZoomGesturesEnabled(pref.getBoolean("ZoomGesture", false));
+
+        colorCirculo = pref.getInt("color", 0);
+        radioCirculo = pref.getInt("radio", 0);
+
+        for(LatLng item : centros)
+        {
+
+            dibujarCirculo(item, colorCirculo, radioCirculo);
+        }
 
         //Para permitir obtener la localización
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
@@ -212,5 +234,71 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         LOCATION_REQUEST_CODE);
             }
         }
+    }
+
+    private void dibujarCirculo(LatLng punto, int color, int radio)
+    {
+        escogerColor(color);
+        circleOptions = new CircleOptions()
+                .center(punto)
+                .fillColor(Color.argb(128, r, g, b))
+                .radius(radio)
+                .strokeWidth(4);
+        circulo = Mapa.addCircle(circleOptions);
+        recordarCirculo(punto);
+        r=g=b=0;
+    }
+
+    private void escogerColor(int col)
+    {
+
+        switch(col)
+        {
+            case 0:
+                r=255;
+                break;
+            case 1:
+                g=255;
+                break;
+            case 2:
+                b=255;
+                break;
+        }
+
+
+    }
+
+    /*Este metodo es llamado en el oncreate, porque ahi se encuentra el metodo clic del botón ir
+    * El ingeniero fue quien lo puso ahi, no se por que*/
+    private void mover()
+    {
+        txtlat = (TextView) findViewById(R.id.lat);
+        txtlon = (TextView) findViewById(R.id.lon);
+        double lati= Double.parseDouble(txtlat.getText().toString());
+        double longi= Double.parseDouble(txtlon.getText().toString());
+        CameraUpdate camUpd1 =
+                CameraUpdateFactory
+                        .newLatLngZoom(new LatLng(lati, -longi), 16);
+
+        Mapa.moveCamera(camUpd1);
+
+    }
+
+    private void recordarCirculo(LatLng centro)
+    {
+        centros.add(centro);
+        String jsonList = gson.toJson(centros);
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putString("centrosCirculos", jsonList);
+        editor.commit();
+    }
+
+    private void recuperarCirculos()
+    {
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
+        String savedList = preferences.getString("centrosCirculos", "No hay nada");
+        Type type = new TypeToken<List<String>>(){}.getType();
+        centros = gson.fromJson(savedList, type);
     }
 }

@@ -13,6 +13,28 @@
 
     </PreferenceCategory>
 
+    <PreferenceCategory android:title="Circulos">
+
+        <ListPreference
+            android:key="color"
+            android:title="Seleccione el un color"
+            android:summary="Escoger un color para el circulo"
+            android:dialogTitle="Seleccione el color"
+            android:entries="@array/colores"
+            android:entryValues="@array/coloresID"
+            />
+
+        <ListPreference
+            android:key="radio"
+            android:title="Seleccione el un tamaño"
+            android:summary="Escoger un tamaño para el circulo"
+            android:dialogTitle="Seleccione el tamaño"
+            android:entries="@array/radios"
+            android:entryValues="@array/radiosID"
+            />
+
+    </PreferenceCategory>
+
     <PreferenceCategory android:title="Configuracion General">
         <CheckBoxPreference
             android:key="Zoomcontroll"
